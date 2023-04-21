@@ -1,32 +1,37 @@
-import { SecurePassword } from "@blitzjs/auth/secure-password"
 import { resolver } from "@blitzjs/rpc"
 import { AuthenticationError } from "blitz"
 import db from "db"
 import { Role } from "types"
-import { Login } from "../schemas"
+import { Login } from "../validations"
+import ActiefAPI from "integrations/ActiefInterim/ActiefAPI"
 
 export const authenticateUser = async (rawEmail: string, rawPassword: string) => {
   const { email, password } = Login.parse({ email: rawEmail, password: rawPassword })
-  const user = await db.user.findFirst({ where: { email } })
-  if (!user) throw new AuthenticationError()
+  const cookies = await ActiefAPI.login(email, password)
 
-  const result = await SecurePassword.verify(user.hashedPassword, password)
-
-  if (result === SecurePassword.VALID_NEEDS_REHASH) {
-    // Upgrade hashed password with a more secure hash
-    const improvedHash = await SecurePassword.hash(password)
-    await db.user.update({ where: { id: user.id }, data: { hashedPassword: improvedHash } })
+  if (!cookies) {
+    throw new AuthenticationError()
   }
 
-  const { hashedPassword, ...rest } = user
-  return rest
+  const { code, code_verifier } = await ActiefAPI.AuthorizeClient(cookies)
+  const { access, refresh } = await ActiefAPI.getAccessToken(cookies, code, code_verifier)
+  const user = await ActiefAPI.getCurrentUser(access)
+
+  // Get user by email
+  let dbUser = await db.user.findFirst({ where: { sub: user.sub } })
+  if (!dbUser) {
+    dbUser = await db.user.create({
+      data: { email: email, sub: user.sub, name: `${user.given_name} ${user.family_name}` },
+    })
+  }
+
+  return { user, access, refresh, dbUser }
 }
 
 export default resolver.pipe(resolver.zod(Login), async ({ email, password }, ctx) => {
   // This throws an error if credentials are invalid
-  const user = await authenticateUser(email, password)
-
-  await ctx.session.$create({ userId: user.id, role: user.role as Role })
-
+  const { user, access, refresh, dbUser } = await authenticateUser(email, password)
+  await ctx.session.$create({ userData: user, userId: dbUser.id, role: dbUser.role as Role })
+  await ctx.session.$setPrivateData({ bearerToken: access, refreshToken: refresh })
   return user
 })
