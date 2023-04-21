@@ -4,11 +4,13 @@ import { useField, UseFieldConfig } from "react-final-form"
 import { Input } from "@chakra-ui/input"
 import { FormControl, FormLabel } from "@chakra-ui/form-control"
 
-export interface LabeledTextFieldProps extends ComponentPropsWithoutRef<typeof Input> {
+export interface LabeledTextFieldProps {
   /** Field name. */
   name: string
   /** Field label. */
   label: string
+  /** Field placeholder */
+  placeholder?: string
   /** Field type. Doesn't include radio buttons and checkboxes */
   type?: "text" | "password" | "email" | "number"
   outerProps?: PropsWithoutRef<JSX.IntrinsicElements["div"]>
