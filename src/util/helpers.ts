@@ -113,13 +113,7 @@ export function getLastDay(curr: Date) {
   return new Date(curr.setDate(curr.getDate() - curr.getDay() + 7))
 }
 
-/**
- * @param {Date} date - the initial Date
- * @param {('Mon'|'Tue'|'Wed'|'Thurs'|'Fri'|'Sat'|'Sun')} day - the day of week
- * @returns {Date} - the Date of last occurrence or same Date if day param is invalid
- */
 type day = "Mon" | "Tue" | "Wed" | "Thurs" | "Fri" | "Sat" | "Sun"
-
 export function getLastDayOccurence(date: Date, day: day): Date {
   const d = new Date(date.getTime())
   const days = ["Sun", "Mon", "Tue", "Wed", "Thurs", "Fri", "Sat"]
