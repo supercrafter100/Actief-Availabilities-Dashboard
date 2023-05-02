@@ -26,7 +26,7 @@ async function getExpectedData(userId: number) {
     where: {
       paid: false,
       date: {
-        lte: lastWednesDay,
+        gte: lastWednesDay,
       },
       userId: userId,
     },
